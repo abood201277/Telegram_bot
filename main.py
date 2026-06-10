@@ -110,10 +110,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         c = countries[code]
         user_balance = get_balance(user_id)
         
-        # التأكد إذا كان رصيده كافي
+        # التأكد إذا كان رصيده كافي (تم إصلاح السطر أدناه)
         if user_balance < c["price"]:
             await query.edit_message_text(
-                f"❌ عذراً، رصيدك الحالي ({user_balance}$) غير كافٍ لشراء رقم {c['name']} بسعر ({c['price']$).\n\n"
+                f"❌ عذراً، رصيدك الحالي {user_balance}$ غير كافٍ لشراء رقم {c['name']} بسعر {c['price']}$.\n\n"
                 f"يرجى الضغط على زر تعبئة الرصيد لشحن حسابك أولاً.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("💰 تعبئة الرصيد الآن", callback_data="deposit_main")]])
             )
@@ -193,7 +193,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         target_user_id = int(parts[2])
         method = parts[3]
         
-        # عند القبول، يتم شحن حساب الزبون بـ 5 دولار كقيمة افتراضية مضافة للمحفظة
         deposit_amount = 5.0 
         new_total = update_balance(target_user_id, deposit_amount)
         
@@ -243,7 +242,6 @@ async def handle_proof(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
     ]
     
-    # إرسال طلب التعبئة لك مباشرة
     try:
         await context.bot.send_photo(
             chat_id=ADMIN_ID,
@@ -264,5 +262,5 @@ app.add_handler(CommandHandler("start", start))
 app.add_handler(CallbackQueryHandler(button))
 app.add_handler(MessageHandler(filters.PHOTO, handle_proof))
 
-print("Wallet-Based Bot with Single Admin & instant purchase is running...")
+print("Wallet-Based Bot fixed and running perfectly...")
 app.run_polling()
