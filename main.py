@@ -1,4 +1,4 @@
-rkhRmAcZw json
+import json
 import os
 import random
 from telegram import (
