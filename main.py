@@ -36,11 +36,11 @@ ATHEER_DEVELOPER = "@h_4rk"
 
 countries = {
     "iq": {"name": "العراق", "price": 2.6, "flag": "🇮🇶"},
-    "us": {"name": "أمريكا", "price": 0.4, "flag": "🇺🇸"},
-    "ph": {"name": "الفلبين", "price": 0.10, "flag": "🇵🇭"},
+    "us": {"name": "أمريكا", "price": 0.40, "flag": "🇺🇸"},
+    "ph": {"name": "الفلبين", "price": 0.50, "flag": "🇵🇭"},
     "bd": {"name": "بنغلاديش", "price": 0.35, "flag": "🇧🇩"},
-    "ru": {"name": "روسيا", "price": 0.6, "flag": "🇷🇺"},
-    "pk": {"name": "باكستان", "price": 0.8, "flag": "🇵🇰"},
+    "ru": {"name": "روسيا", "price": 0.60, "flag": "🇷🇺"},
+    "pk": {"name": "باكستان", "price": 0.80, "flag": "🇵🇰"},
     "lb": {"name": "لبنان", "price": 1.6, "flag": "🇱🇧"},
 }
 
