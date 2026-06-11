@@ -1,4 +1,4 @@
-import json
+rkhRmAcZw json
 import os
 import random
 from telegram import (
@@ -16,7 +16,7 @@ from telegram.ext import (
 )
 
 # ----------------- الإعدادات الأساسية -----------------
-TOKEN = "8690641497:AAGXVjkTtg72dSsIh3De_-ZW32rkhRmAcZw"  # توكن بوتك
+TOKEN = "8690641497:AAHYHhLEX53A_wRIAF5b2TviZUJR_2xq_aM"  # توكن بوتك
 
 ADMIN_ID =7555122412  # ضع هنا الآيدي الخاص بك كأدمن وحيد (رقم فقط)
 
