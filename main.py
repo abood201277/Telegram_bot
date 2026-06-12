@@ -26,7 +26,7 @@ TOKEN = "8690641497:AAHYHhLEX53A_wRIAF5b2TviZUJR_2xq_aM"  # ضع توكن بوت
 
 ADMIN_ID = 7555122412  # ضع هنا الآيدي الخاص بك كأدمن وحيد (رقم فقط)
 
-# معرف قناة الإثباتات العامة
+# معرف قناة الإثباتات العامة (إذا لم تملك قناة حالياً امسح المعرف واترك علامتين الاقتباس فارغة "")
 PROOF_CHANNEL = "@nwmbere"  
 
 # يوزرك الشخصي اللي يظهر للمشتري حتى يراسلك وتسلمه الرقم
@@ -78,7 +78,7 @@ def update_balance(user_id, amount):
     return balances[str(user_id)]
 
 
-# أمر /start للمستخدمين (تم تصحيح الأزرار لتنطلق فوراً)
+# أمر /start للمستخدمين
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     balance = get_balance(user_id)
@@ -158,10 +158,10 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # 2. قسم تعبئة الرصيد الملون مع زر النجوم التلقائي المباشر
     elif query.data == "deposit_main":
         keyboard = [
-            [InlineKeyboardButton("⭐ شحن تلقائي فوري بالنجوم (Stars) ⭐", callback_query_data="charge_stars")],
-            [InlineKeyboardButton("📱 تعبئة يدوية عبر آسيا سيل", callback_query_data="dep_asia")],
-            [InlineKeyboardButton("🦁 تعبئة يدوية عبر أثير / زين", callback_query_data="dep_atheer")],
-            [InlineKeyboardButton("🔴 🔙 العودة للقائمة الرئيسية 🔴", callback_query_data="main_menu")]
+            [InlineKeyboardButton("⭐ شحن تلقائي فوري بالنجوم (Stars) ⭐", callback_data="charge_stars")],
+            [InlineKeyboardButton("📱 تعبئة يدوية عبر آسيا سيل", callback_data="dep_asia")],
+            [InlineKeyboardButton("🦁 تعبئة يدوية عبر أثير / زين", callback_data="dep_atheer")],
+            [InlineKeyboardButton("🔴 🔙 العودة للقائمة الرئيسية 🔴", callback_data="main_menu")]
         ]
         await query.edit_message_text("💰 اختر وسيلة التحويل لتعبئة رصيد حسابك بالدولار داخل البوت:", reply_markup=InlineKeyboardMarkup(keyboard))
 
@@ -181,7 +181,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📥 بعد إتمام عملية التحويل، أرسل صورة إثبات التحويل هنا في البوت مباشرة ليرتفع طلبك للإدارة وتتم إضافة الرصيد لحسابك."
         )
 
-    # توليد فاتورة النجوم الفورية (50 نجمة تعطي رصيد 0.50$ بالمحفظة تلقائياً)
+    # توليد فاتورة النجوم الفورية
     elif query.data == "charge_stars":
         chat_id = query.message.chat_id
         title = "شحن المحفظة بالنجوم"
