@@ -26,7 +26,7 @@ TOKEN = "8690641497:AAHYHhLEX53A_wRIAF5b2TviZUJR_2xq_aM"  # ضع توكن بوت
 
 ADMIN_ID = 7555122412  # ضع هنا الآيدي الخاص بك كأدمن وحيد (رقم فقط)
 
-# معرف قناة الإثباتات العامة (إذا لم تملك قناة حالياً امسح المعرف واترك علامتين الاقتباس فارغة "")
+# معرف قناة الإثباتات العامة
 PROOF_CHANNEL = "@nwmbere"  
 
 # يوزرك الشخصي اللي يظهر للمشتري حتى يراسلك وتسلمه الرقم
@@ -83,6 +83,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     balance = get_balance(user_id)
     
+    # تنظيف أي حالة انتظار شحن قديمة
+    if "waiting_for_stars" in context.user_data:
+        del context.user_data["waiting_for_stars"]
+    
     keyboard = [
         [InlineKeyboardButton("🟢 📱 شراء رقم متاح 🟢", callback_data="buy")],
         [InlineKeyboardButton("🔵 💰 تعبئة رصيد المحفظة 🔵", callback_data="deposit_main")]
@@ -138,7 +142,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"💵 السعر المخصوم: {c['price']}$\n"
             f"💰 رصيدك المتبقي: {new_bal}$\n\n"
             f"🆔 **رقم طلبك الخاص:** `{order_id}`\n\n"
-            f"📥 لاستلام رقمك، يرجى نسخ رقم الطلب أعلاه ومراسلتي مباشرة عبر حسابي: {OWNER_USERNAME}"
+            f"📥 لاستلام رقمك, يرجى نسخ رقم الطلب أعلاه ومراسلتي مباشرة عبر حسابي: {OWNER_USERNAME}"
         )
         await query.edit_message_text(success_text, parse_mode="Markdown")
 
@@ -155,7 +159,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception:
             pass
 
-    # 2. قسم تعبئة الرصيد الملون مع زر النجوم التلقائي المباشر
+    # 2. قسم تعبئة الرصيد
     elif query.data == "deposit_main":
         keyboard = [
             [InlineKeyboardButton("⭐ شحن تلقائي فوري بالنجوم (Stars) ⭐", callback_data="charge_stars")],
@@ -181,23 +185,13 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             f"📥 بعد إتمام عملية التحويل، أرسل صورة إثبات التحويل هنا في البوت مباشرة ليرتفع طلبك للإدارة وتتم إضافة الرصيد لحسابك."
         )
 
-    # توليد فاتورة النجوم الفورية
+    # طلب تحديد عدد النجوم يدوياً
     elif query.data == "charge_stars":
-        chat_id = query.message.chat_id
-        title = "شحن المحفظة بالنجوم"
-        description = "شحن تلقائي فوري لرصيدك بمقدار 50 نجمة ($0.50)"
-        payload = "wallet_topup_stars"
-        currency = "XTR"
-        prices = [LabeledPrice(label="شحن 50 نجمة", amount=50)]
-        
-        await context.bot.send_invoice(
-            chat_id=chat_id,
-            title=title,
-            description=description,
-            payload=payload,
-            provider_token="",
-            currency=currency,
-            prices=prices
+        context.user_data["waiting_for_stars"] = True
+        await query.edit_message_text(
+            "📥 **يرجى إرسال عدد النجوم رقماً التي تريد شحنها الآن:**\n"
+            "علماً أن كل (1) نجمة ⭐ = تمنحك 0.01$ في المحفظة.\n\n"
+            "مثال: أرسل الرقم `75` أو `100` مباشرة كمثال برقم واضح."
         )
 
     # العودة للقائمة الرئيسية
@@ -236,6 +230,47 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
             pass
         await query.edit_message_caption(caption=f"{query.message.caption}\n\n❌ تم رفض طلب الشحن هذا.")
 
+# استقبال الرسائل النصية لتحديد عدد النجوم أو معالجة صور آسيا وأثير
+async def handle_text_and_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    user_id = update.effective_user.id
+    
+    # التحقق مما إذا كان البوت ينتظر من المستخدم تحديد عدد النجوم
+    if context.user_data.get("waiting_for_stars"):
+        text_received = update.message.text
+        
+        # التأكد من أن المستخدم أرسل رقماً صحيحاً
+        if not text_received or not text_received.isdigit():
+            await update.message.reply_text("❌ يرجى إرسال رقم صحيح فقط (بدون أحرف أو رموز). أرسل العدد مجدداً:")
+            return
+            
+        stars_amount = int(text_received)
+        
+        if stars_amount <= 0:
+            await update.message.reply_text("❌ يجب أن يكون عدد النجوم أكبر من 0. أرسل العدد مجدداً:")
+            return
+            
+        # إلغاء وضع الانتظار لتوليد الفاتورة
+        del context.user_data["waiting_for_stars"]
+        
+        chat_id = update.message.chat_id
+        title = "شحن المحفظة بالنجوم"
+        description = f"طلب تعبئة تلقائية مخصصة لـ {stars_amount} نجمة تليجرام"
+        payload = "wallet_topup_stars"
+        currency = "XTR"
+        prices = [LabeledPrice(label=f"شحن {stars_amount} نجمة", amount=stars_amount)]
+        
+        # إرسال فاتورة تليجرام الرسمية بالعدد المحدد فوراً
+        await context.bot.send_invoice(
+            chat_id=chat_id,
+            title=title,
+            description=description,
+            payload=payload,
+            provider_token="",
+            currency=currency,
+            prices=prices
+        )
+        return
+
 # موافقة سيرفر تليجرام التلقائية على فاتورة النجوم
 async def precheckout_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     query = update.pre_checkout_query
@@ -244,25 +279,26 @@ async def precheckout_callback(update: Update, context: ContextTypes.DEFAULT_TYP
     else:
         await query.answer(ok=True)
 
-# استقبال النجوم وشحن ملف الـ JSON فوراً (1 نجمة = 1 سنت)
+# استقبال النجوم وشحن ملف الـ JSON فوراً (كل نجمة تعطي 0.01$ بالملف تلقائياً)
 async def successful_payment_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     payment = update.message.successful_payment
     user_id = update.message.from_user.id
     stars_received = payment.total_amount
     
-    # الحسبة: 50 نجمة تعادل 0.50$ دولار في حساب المستخدم بالملف
+    # كل نجمة تمنح 0.01$ في المحفظة، بالتالي 75 نجمة تعطي 0.75$ تلقائياً
     added_amount = stars_received * 0.01
     new_total_balance = update_balance(user_id, added_amount)
     
     success_text = (
         f"🌟 **تهانينا! تم الشحن التلقائي بنجاح!** 🌟\n\n"
-        f"📥 تم استقبال: {stars_received} نجمة تليجرام.\n"
-        f"💰 تم شحن محفظتك بـ: +{added_amount}$\n"
-        f"💵 رصيدك الكلي الحالي أصبح: {new_total_balance}$"
+        f"📥 تم استقبال: {stars_received} نجمة تليجرام من رصيدك.\n"
+        f"💰 تم شحن محفظتك بـ: +{added_amount:.2f}$\n"
+        f"💵 رصيدك الكلي الحالي أصبح: {new_total_balance}$\n\n"
+        f"شكراً لاستخدامك خدماتنا السريعة! 🚀"
     )
     await update.message.reply_text(success_text)
 
-# استلام صور إثباتات الشحن اليدوية من الزبائن
+# استلام صور إثباتات الشحن اليدوية من الزبائن لآسيا وأثير
 async def handle_proof(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if "pending_deposit" not in context.user_data:
         return  
@@ -303,11 +339,12 @@ app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
 app.add_handler(CallbackQueryHandler(button))
+app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_and_messages))
 app.add_handler(MessageHandler(filters.PHOTO, handle_proof))
 
 # ربط محركات دفع واستلام النجوم التلقائية بالبوت مالتك
 app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
 app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
 
-print("Wallet-Based Bot with Stars and Emojis running perfectly...")
+print("Wallet-Based Bot with Dynamic Stars Input running perfectly...")
 app.run_polling()
