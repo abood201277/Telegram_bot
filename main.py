@@ -24,7 +24,9 @@ logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s
 # ----------------- الإعدادات الأساسية -----------------
 TOKEN = "8690641497:AAHYHhLEX53A_wRIAF5b2TviZUJR_2xq_aM"  # ضع توكن بوتك الحقيقي هنا
 
-ADMIN_ID = 7555122412  # ضع هنا الآيدي الخاص بك كأدمن وحيد (رقم فقط)
+# 👥 هير خلينه قائمة بالآيديهات المسموح لها بالتحكم (أنت وصديقك)
+# ضع آيديك وآيدي صديقك بفواصل مثل: [123456789, 987654321]
+ADMIN_IDS = [7555122412,1192400659]  
 
 PROOF_CHANNEL = "@nwmbere"  # معرف قناة عمليات الشراء
 OWNER_USERNAME = "@Klm_r7"  
@@ -73,7 +75,6 @@ def update_balance(user_id, amount):
     save_data(BALANCE_FILE, balances)
     return balances[str(user_id)]
 
-# معرفة كم رقم متوفر لكل دولة بالمخزن
 def get_stock_count(code):
     stock = load_data(NUMBERS_FILE)
     return len(stock.get(code, []))
@@ -98,19 +99,19 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
-# لوحة تحكم الأدمن السرية لإضافة الأرقام
+# لوحة تحكم الأدمن السرية (تعديل لتشمل قائمة الأدمنية)
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
-    if user_id != ADMIN_ID:
-        await update.message.reply_text("❌ هذا الأمر خاص بمالك البوت فقط.")
+    if user_id not in ADMIN_IDS:
+        await update.message.reply_text("❌ هذا الأمر خاص بمسؤولي البوت فقط.")
         return
         
     keyboard = []
     for code, c in countries.items():
         count = get_stock_count(code)
-        keyboard.append([InlineKeyboardButton(f"➕ إضافة رقم لـ {c['flag']} {c['name']} ({count} متوفر)", callback_data=f"adm_addstock_{code}")])
+        keyboard.append([InlineKeyboardButton(f"➕ إضافة لـ {c['flag']} {c['name']} ({count} متوفر)", callback_data=f"adm_addstock_{code}")])
         
-    await update.message.reply_text("🛠️ **لوحة تحكم المطور - إضافة أرقام جاهزة للمخزن:**", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await update.message.reply_text("🛠️ **لوحة التحكم - إضافة أرقام جاهزة للمخزن:**", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 # معالجة الضغط على الأزرار والتنقل
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -118,7 +119,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user_id = query.from_user.id
 
-    # 1. قائمة شراء الأرقام مع عرض المتوفر بالمخزن
+    # 1. قائمة شراء الأرقام
     if query.data == "buy":
         keyboard = []
         for code, c in countries.items():
@@ -129,77 +130,73 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         keyboard.append([InlineKeyboardButton("🔴 🔙 العودة للقائمة الرئيسية 🔴", callback_data="main_menu")])
         await query.edit_message_text("📱 اختر الدولة التي تريد شراء رقمها (التسليم فوري تلقائي):", reply_markup=InlineKeyboardMarkup(keyboard))
 
-    # تنفيذ الشراء التلقائي الفوري وتسليم الرقم والكود
+    # تنفيذ الشراء التلقائي
     elif query.data.startswith("buy_"):
         code = query.data.split("_")[1]
         c = countries[code]
         user_balance = get_balance(user_id)
         
-        # التأكد من وجود أرقام بالمخزن أولاً
         stock = load_data(NUMBERS_FILE)
         if not stock.get(code) or len(stock[code]) == 0:
             await query.edit_message_text(
-                f"❌ نعتذر منك جداً! أرقام {c['flag']} {c['name']} نافذة حالياً من المخزن.\n"
-                f"تم إرسال إشعار للمطور لتوفيرها بأقرب وقت.",
+                f"❌ نعتذر منك جداً! أرقام {c['flag']} {c['name']} نافذة حالياً من المخزن.",
                 reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔴 العودة 🔴", callback_data="buy")]])
             )
             return
 
         if user_balance < c["price"]:
             await query.edit_message_text(
-                f"❌ رصيدك الحالي {user_balance}$ غير كافٍ لشراء رقم بسعر {c['price']}$.\n\n"
-                f"يرجى شحن حسابك أولاً.",
-                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔵 💰 تعبئة الرصيد الآن 🔵", callback_data="deposit_main")]])
+                f"❌ رصيدك الحالي {user_balance}$ غير كافٍ لشراء رقم بسعر {c['price']}$.",
+                reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔵 💰 تعبئة الرصيد 🔵", callback_data="deposit_main")]])
             )
             return
 
-        # سحب أول رقم متوفر بالمخزن وحذفه لكي لا يتكرر
         selected_number_data = stock[code].pop(0)
-        save_data(NUMBERS_FILE, stock) # حفظ المخزن بعد الحذف
+        save_data(NUMBERS_FILE, stock)
         
-        # خصم المبلغ من المحفظة
         new_bal = update_balance(user_id, -c["price"])
         
         phone_num = selected_number_data["phone"]
         phone_code = selected_number_data["code"]
+        two_step = selected_number_data.get("two_step", "لا يوجد")
         
         success_text = (
             f"🎉 **تم الشراء والتسليم التلقائي بنجاح!**\n\n"
             f"🏳️ الدولة: {c['flag']} {c['name']}\n"
             f"💵 السعر: {c['price']}$\n"
             f"💰 رصيدك المتبقي: {new_bal}$\n\n"
-            f"📱 **بيانات رقمك الجديد الحين:**\n"
+            f"📱 **بيانات رقمك الجديد بالكامل:**\n"
             f"📞 الرقم: `{phone_num}`\n"
-            f"🔑 الكود/الرمز: `{phone_code}`\n\n"
-            f"⚠️ انسخ البيانات وفعل حسابك فوراً! شكراً لثقتك بـ فولت بوت ⚡"
+            f"🔑 كود التحقق: `{phone_code}`\n"
+            f"🔐 التحقق بخطوتين: `{two_step}`\n\n"
+            f"⚠️ فعل حسابك الآن! شكراً لاستخدامك فولت بوت ⚡"
         )
         await query.edit_message_text(success_text, parse_mode="Markdown")
 
-        # إرسال لقناة عمليات الشراء
         try:
             proof_channel_text = (
                 f"🛍️ **عملية شراء ناجحة بتسليم تلقائي!**\n\n"
                 f"🏳️ الدولة: {c['flag']} {c['name']}\n"
                 f"💵 السعر: {c['price']}$\n"
-                f"✅ الحالة: تم تسليم الرقم والكود للمشتري آلياً بلمحة بصر.\n\n"
+                f"✅ الحالة: تم تسليم الرقم، الكود، وكلمة المرور آلياً.\n\n"
                 f"فولت بوت.. سرعة وأمان 💎"
             )
             await context.bot.send_message(chat_id=PROOF_CHANNEL, text=proof_channel_text, parse_mode="Markdown")
-        except Exception:
-            pass
+        except Exception: pass
 
-    # الأدمن يضغط لإضافة رقم لدولة معينة
+    # الأدمن يضغط لإضافة رقم
     elif query.data.startswith("adm_addstock_"):
-        if user_id != ADMIN_ID: return
+        if user_id not in ADMIN_IDS: return
         code = query.data.split("_")[2]
         context.user_data["adding_stock_for"] = code
         await query.edit_message_text(
             f"📥 يرجى إرسال بيانات الرقم لـ {countries[code]['name']} بالصيغة التالية تماماً:\n\n"
-            f"`الرقم : الكود`\n\n"
-            f"مثال:\n`+1234567890 : 55431`"
+            f"`الرقم : الكود : كلمة المرور`\n\n"
+            f"💡 مثال إذا كان يوجد باسورد:\n`+17025550199 : 44831 : abood123`\n\n"
+            f"💡 مثال إذا لا يوجد باسورد:\n`+17025550199 : 44831 : لا يوجد`"
         )
 
-    # 2. قسم تعبئة الرصيد
+    # الأقسام الأخرى وتعبئة الرصيد
     elif query.data == "deposit_main":
         keyboard = [
             [InlineKeyboardButton("⭐ شحن تلقائي فوري بالنجوم (Stars) ⭐", callback_data="charge_stars")],
@@ -229,8 +226,9 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         ]
         await query.edit_message_text(f"👋 أهلاً بك في **فولت بوت | Volt Bot 💎**\n\n💵 رصيد حسابك الحالي: {balance}$", reply_markup=InlineKeyboardMarkup(keyboard))
 
-    # قبول الأدمن للشحن اليدوي
+    # قبول التعبئة من قبل أي أدمن من القائمة
     elif query.data.startswith("adm_add_"):
+        if user_id not in ADMIN_IDS: return
         parts = query.data.split("_")
         target_user_id = int(parts[2])
         method = parts[3]
@@ -241,6 +239,7 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_caption(caption=f"{query.message.caption}\n\n✅ تم قبول التعبئة بنجاح.")
 
     elif query.data.startswith("adm_deny_"):
+        if user_id not in ADMIN_IDS: return
         parts = query.data.split("_")
         target_user_id = int(parts[2])
         try:
@@ -248,35 +247,36 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except Exception: pass
         await query.edit_message_caption(caption=f"{query.message.caption}\n\n❌ تم الرفض.")
 
-# استقبال الرسائل النصية (لتحديد النجوم أو لإضافة الأرقام للمخزن)
+# استقبال الرسائل النصية
 async def handle_text_and_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text_received = update.message.text
     
-    # 1. الأدمن يقوم بإضافة رقم جديد للمخزن
-    if user_id == ADMIN_ID and "adding_stock_for" in context.user_data:
+    # التحقق من أن المرسل أدمن لإضافة رقم
+    if user_id in ADMIN_IDS and "adding_stock_for" in context.user_data:
         code = context.user_data["adding_stock_for"]
         del context.user_data["adding_stock_for"]
         
-        if ":" not in text_received:
-            await update.message.reply_text("❌ صيغة خاطئة! يجب أن ترسلها هكذا `الرقم : الكود`. أعد المحاولة من قائمة /admin")
+        if text_received.count(":") < 2:
+            await update.message.reply_text("❌ صيغة خاطئة! يجب أن ترسلها هكذا `الرقم : الكود : كلمة المرور`.")
             return
             
         parts = text_received.split(":")
         phone = parts[0].strip()
         phone_code = parts[1].strip()
+        two_step = parts[2].strip()
         
         stock = load_data(NUMBERS_FILE)
         if code not in stock:
             stock[code] = []
             
-        stock[code].append({"phone": phone, "code": phone_code})
+        stock[code].append({"phone": phone, "code": phone_code, "two_step": two_step})
         save_data(NUMBERS_FILE, stock)
         
-        await update.message.reply_text(f"✅ تم إضافة الرقم `{phone}` بنجاح إلى مخزن {countries[code]['name']}! أصبح متوفراً للبيع التلقائي فوراً.")
+        await update.message.reply_text(f"✅ تم إضافة الرقم بنجاح للمخزن!\n📞 الرقم: `{phone}`\n🔑 الكود: `{phone_code}`\n🔐 الباسورد: `{two_step}`")
         return
 
-    # 2. المستخدم يرسل عدد النجوم المراد دفعها
+    # شحن النجوم للمستخدمين
     if context.user_data.get("waiting_for_stars"):
         if not text_received or not text_received.isdigit():
             await update.message.reply_text("❌ يرجى إرسال رقم صحيح فقط:")
@@ -321,7 +321,7 @@ async def successful_payment_callback(update: Update, context: ContextTypes.DEFA
     )
     await update.message.reply_text(success_text)
 
-# استلام صور إثباتات آسيا وأثير من الزبائن
+# استلام صور إثباتات آسيا وأثير (ترسل لجميع الأدمنية المتاحين بالمستقبل إذا رغبت، حالياً ترسل لأول أدمن)
 async def handle_proof(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if "pending_deposit" not in context.user_data: return  
     deposit = context.user_data["pending_deposit"]
@@ -330,8 +330,9 @@ async def handle_proof(update: Update, context: ContextTypes.DEFAULT_TYPE):
     admin_caption = f"🚨 **طلب شحن معلق!**\n\n👤 الزبون: {user.first_name}\n🆔 الآيدي: {user.id}\n💳 الوسيلة: {deposit['method']}\n"
     keyboard = [[InlineKeyboardButton("✅ قبول (5$)", callback_data=f"adm_add_{user.id}_{deposit['method']}"), InlineKeyboardButton("❌ رفض", callback_data=f"adm_deny_{user.id}")]]
     
+    # ترسل للأدمن الأول في القائمة كإشعار أساسي
     try:
-        await context.bot.send_photo(chat_id=ADMIN_ID, photo=update.message.photo[-1].file_id, caption=admin_caption, reply_markup=InlineKeyboardMarkup(keyboard))
+        await context.bot.send_photo(chat_id=ADMIN_IDS[0], photo=update.message.photo[-1].file_id, caption=admin_caption, reply_markup=InlineKeyboardMarkup(keyboard))
     except Exception: pass
     await update.message.reply_text("📥 تم إرسال إثبات التعبئة بنجاح للمطور. سيتم مراجعة طلبك...")
     del context.user_data["pending_deposit"]
@@ -340,12 +341,12 @@ async def handle_proof(update: Update, context: ContextTypes.DEFAULT_TYPE):
 app = ApplicationBuilder().token(TOKEN).build()
 
 app.add_handler(CommandHandler("start", start))
-app.add_handler(CommandHandler("admin", admin_panel)) # أمر لوحة التحكم بالأرقام
+app.add_handler(CommandHandler("admin", admin_panel))
 app.add_handler(CallbackQueryHandler(button))
 app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_and_messages))
 app.add_handler(MessageHandler(filters.PHOTO, handle_proof))
 app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
 app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
 
-print("Volt Bot Running Perfectly with Automatic Stock Delivery...")
+print("Volt Bot Running with Multi-Admin Support...")
 app.run_polling()
