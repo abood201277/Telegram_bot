@@ -22,9 +22,9 @@ from telegram.ext import (
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # ----------------- الإعدادات الأساسية -----------------
-TOKEN = "8690641497:AAHYHhLEX53A_wRIAF5b2TviZUJR_2xq_aM"  # ضع توكن بوتك الحقيقي هنا بين العلامتين
+TOKEN = "8690641497:AAHYHhLEX53A_wRIAF5b2TviZUJR_2xq_aM"  # ضع توكن بوتك الحقيقي هنا
 
-ADMIN_ID =7555122412  # ضع هنا الآيدي الخاص بك كأدمن وحيد (رقم فقط)
+ADMIN_ID = 7555122412  # ضع هنا الآيدي الخاص بك كأدمن وحيد (رقم فقط)
 
 # معرف قناة الإثباتات العامة
 PROOF_CHANNEL = "@nwmbere"  
@@ -78,14 +78,14 @@ def update_balance(user_id, amount):
     return balances[str(user_id)]
 
 
-# أمر /start للمستخدمين مع أزرار ملونة بالإيموجي
+# أمر /start للمستخدمين (تم تصحيح الأزرار لتنطلق فوراً)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     balance = get_balance(user_id)
     
     keyboard = [
-        [InlineKeyboardButton("🟢 📱 شراء رقم متاح 🟢", callback_query_data="buy")],
-        [InlineKeyboardButton("🔵 💰 تعبئة رصيد المحفظة 🔵", callback_query_data="deposit_main")]
+        [InlineKeyboardButton("🟢 📱 شراء رقم متاح 🟢", callback_data="buy")],
+        [InlineKeyboardButton("🔵 💰 تعبئة رصيد المحفظة 🔵", callback_data="deposit_main")]
     ]
     
     text = (
