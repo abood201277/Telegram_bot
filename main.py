@@ -22,12 +22,14 @@ from telegram.ext import (
 logging.basicConfig(format='%(asctime)s - %(name)s - %(levelname)s - %(message)s', level=logging.INFO)
 
 # ----------------- الإعدادات الأساسية -----------------
-TOKEN = "8690641497:AAHYHhLEX53A_wRIAF5b2TviZUJR_2xq_aM"  # ضع توكن بوتك الحقيقي هنا
+TOKEN = "8690641497:AAHYHhLEX53A_wRIAF5b2TviZUJR_2xq_aM"  # ⚠️ ضع توكن بوتك الحقيقي هنا
 
-# قائمة الآيديهات المسموح لها بالتحكم (أنت وصديقك)
+# 👥 ضع آيديك وآيدي صديقك هنا (أرقام فقط)
 ADMIN_IDS = [7555122412, 1192400659]  
 
-PROOF_CHANNEL = "@nwmbere"  # معرف قناة عمليات الشراء
+# 🛍️ ضع يوزر قناة عمليات الشراء الحقيقي هنا
+PROOF_CHANNEL = "@nwmbere"  
+
 OWNER_USERNAME = "@Klm_r7"  
 
 ASIA_NUMBER = "07768828482"
@@ -78,7 +80,7 @@ def get_stock_count(code):
     stock = load_data(NUMBERS_FILE)
     return len(stock.get(code, []))
 
-# أمر /start للمستخدمين
+# أمر /start للمستخدمين (تم تنظيفه بالكامل من أي إجبار قديم)
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     balance = get_balance(user_id)
@@ -98,7 +100,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
     await update.message.reply_text(text, reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
-# لوحة تحكم الأدمن السرية المحدثة
+# لوحة تحكم الأدمن السرية
 async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     if user_id not in ADMIN_IDS:
@@ -110,10 +112,10 @@ async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
         count = get_stock_count(code)
         keyboard.append([
             InlineKeyboardButton(f"➕ إضافة لـ {c['flag']}", callback_data=f"adm_addstock_{code}"),
-            InlineKeyboardButton(f"🗑️ حذف رقم ({count} متوفر)", callback_data=f"adm_delstock_{code}")
+            InlineKeyboardButton(f"🗑️ حذف رقم ({count})", callback_data=f"adm_delstock_{code}")
         ])
         
-    await update.message.reply_text("🛠️ **لوحة التحكم - إدارة مخزن الأرقام (إضافة وحذف متاح):**", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
+    await update.message.reply_text("🛠️ **لوحة التحكم - إدارة مخزن الأرقام:**", reply_markup=InlineKeyboardMarkup(keyboard), parse_mode="Markdown")
 
 # معالجة الضغط على الأزرار والتنقل
 async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -121,7 +123,6 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.answer()
     user_id = query.from_user.id
 
-    # شراء الأرقام للمستخدمين
     if query.data == "buy":
         keyboard = []
         for code, c in countries.items():
@@ -160,51 +161,51 @@ async def button(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         await query.edit_message_text(success_text, parse_mode="Markdown")
 
-    # الأدمن يضغط لإضافة رقم
+        try:
+            proof_channel_text = (
+                f"🛍️ **عملية شراء ناجحة بتسليم تلقائي!**\n\n"
+                f"🏳️ الدولة: {c['flag']} {c['name']}\n"
+                f"💵 السعر: {c['price']}$\n"
+                f"✅ الحالة: تم تسليم الرقم، الكود، وكلمة المرور آلياً.\n\n"
+                f"فولت بوت.. سرعة وأمان 💎"
+            )
+            await context.bot.send_message(chat_id=PROOF_CHANNEL, text=proof_channel_text, parse_mode="Markdown")
+        except Exception: pass
+
     elif query.data.startswith("adm_addstock_"):
         if user_id not in ADMIN_IDS: return
         code = query.data.split("_")[2]
         context.user_data["adding_stock_for"] = code
         await query.edit_message_text(f"📥 ارسل بيانات الرقم لـ {countries[code]['name']} بالصيغة:\n`الرقم : الكود : كلمة المرور`")
 
-    # 🗑️ ميزة الحذف التلقائي للأدمن
     elif query.data.startswith("adm_delstock_"):
         if user_id not in ADMIN_IDS: return
         code = query.data.split("_")[2]
         stock = load_data(NUMBERS_FILE)
         
         if not stock.get(code) or len(stock[code]) == 0:
-            await query.edit_message_text(f"❌ مخزن {countries[code]['name']} فارغ بالفعل ولا يوجد أرقام لحذفها!", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 عودة للوحة الأدمن", callback_data="adm_back")]]))
+            await query.edit_message_text(f"❌ مخزن {countries[code]['name']} فارغ بالفعل.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 عودة للوحة الأدمن", callback_data="adm_back")]]))
             return
             
-        # حذف آخر رقم تم إضافته للمخزن (Last In, First Out)
         removed_num = stock[code].pop()
         save_data(NUMBERS_FILE, stock)
-        
-        count = len(stock[code])
-        await query.edit_message_text(
-            f"🗑️ **تم حذف الرقم التالي من المخزن بنجاح:**\n"
-            f"📞 الرقم المحذوف: `{removed_num['phone']}`\n\n"
-            f"📊 المتبقي حالياً في المخزن: {count} رقم.",
-            reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 عودة للوحة الأدمن", callback_data="adm_back")]])
-        )
+        await query.edit_message_text(f"🗑️ تم حذف الرقم: `{removed_num['phone']}` بنجاح.", reply_markup=InlineKeyboardMarkup([[InlineKeyboardButton("🔙 عودة للوحة الأدمن", callback_data="adm_back")]]))
 
     elif query.data == "adm_back":
         await admin_panel(update, context)
 
-    # بقية أزرار الدفع والرجوع للمستخدمين
     elif query.data == "deposit_main":
         keyboard = [[InlineKeyboardButton("⭐ شحن تلقائي بالنجوم ⭐", callback_data="charge_stars")], [InlineKeyboardButton("🔴 العودة 🔴", callback_data="main_menu")]]
-        await query.edit_message_text("💰 اختر وسيلة التحويل:", reply_markup=InlineKeyboardMarkup(keyboard))
+        await query.edit_message_text("💰 اختر وسيلة التحويل التلقائية بالنجوم:", reply_markup=InlineKeyboardMarkup(keyboard))
 
     elif query.data == "charge_stars":
         context.user_data["waiting_for_stars"] = True
-        await query.edit_message_text("📥 يرجى إرسال عدد النجوم رقماً:")
+        await query.edit_message_text("📥 يرجى إرسال عدد النجوم رقماً التي تريد شحنها:")
 
     elif query.data == "main_menu":
         await start(update, context)
 
-# استقبال الرسائل النصية لشحن النجوم أو الإضافة للمخزن
+# استقبال الرسائل النصية
 async def handle_text_and_messages(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text_received = update.message.text
@@ -257,5 +258,5 @@ app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text_and_
 app.add_handler(PreCheckoutQueryHandler(precheckout_callback))
 app.add_handler(MessageHandler(filters.SUCCESSFUL_PAYMENT, successful_payment_callback))
 
-print("Volt Bot running smoothly with easy delete feature...")
+print("Volt Bot is fully clean and running...")
 app.run_polling()
